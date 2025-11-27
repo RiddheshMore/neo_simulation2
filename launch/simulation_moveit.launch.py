@@ -35,7 +35,7 @@ You can launch this file using the following terminal commands:
 
 # OpaqueFunction is used to perform setup actions during launch through a Python function
 def launch_setup(context: LaunchContext, my_neo_robot_arg, my_neo_env_arg, robot_arm_arg, docking_adapter_arg, 
-                 include_wrist_camera_arg, include_depth_camera_arg, include_pan_tilt_arg):
+                 include_wrist_camera_arg, include_depth_camera_arg, include_pan_tilt_arg, include_moveit_arg):
     # Create a list to hold all the nodes
     launch_actions = []
     # The perform method of a LaunchConfiguration is called to evaluate its value.
@@ -47,6 +47,7 @@ def launch_setup(context: LaunchContext, my_neo_robot_arg, my_neo_env_arg, robot
     include_depth_camera = include_depth_camera_arg.perform(context)
 
     include_pan_tilt = include_pan_tilt_arg.perform(context)
+    include_moveit = include_moveit_arg.perform(context)
     use_sim_time = True
     
     print("\n" + "="*70)
@@ -171,15 +172,6 @@ def launch_setup(context: LaunchContext, my_neo_robot_arg, my_neo_env_arg, robot
 
 
 
-    # Starting the teleop node
-    teleop = Node(
-        package='teleop_twist_keyboard',
-        executable="teleop_twist_keyboard",
-        output='screen',
-        prefix = 'xterm -e',
-        name='teleop'
-    )
-
     # RViz for visualization and joint control
     rviz_config = os.path.join(
         get_package_share_directory('neo_simulation2'),
@@ -246,10 +238,27 @@ def launch_setup(context: LaunchContext, my_neo_robot_arg, my_neo_env_arg, robot
 
 
 
-    print("[INFO] - RViz2 (for visualization and joint control)")
-    launch_actions.append(rviz)
-    print("[INFO] - Teleop Twist Keyboard")
-    launch_actions.append(teleop)
+    if include_moveit == 'true':
+        print("[INFO] - MoveIt2 (including RViz)")
+        moveit_launch = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(get_package_share_directory('neo_ur_moveit_config'), 'launch', 'neo_ur_moveit.launch.py')
+            ),
+            launch_arguments={
+                'my_robot': my_neo_robot,
+                'ur_type': robot_arm_type,
+                'use_sim_time': 'true',
+                'use_gazebo': 'true',
+                'prefix': robot_arm_type, # Assuming prefix matches arm type for UR robots
+                'launch_rviz': 'true',
+                'include_pan_tilt': include_pan_tilt
+            }.items()
+        )
+        launch_actions.append(moveit_launch)
+    else:
+        print("[INFO] - RViz2 (for visualization and joint control)")
+        launch_actions.append(rviz)
+
     # launch_actions.append(shutdown_event)
     print("\n" + "="*70)
     print("  Launch Configuration Complete")
@@ -258,7 +267,8 @@ def launch_setup(context: LaunchContext, my_neo_robot_arg, my_neo_env_arg, robot
     print(f"  World: {my_neo_environment}")
     print(f"  Arm: {robot_arm_type if robot_arm_type else 'Disabled'}")
     print(f"  Arm: {robot_arm_type if robot_arm_type else 'Disabled'}")
-    print(f"  RViz: Enabled (joint control available)")
+    print(f"  MoveIt: {include_moveit}")
+    print(f"  RViz: {'Enabled (MoveIt)' if include_moveit == 'true' else 'Enabled (Standard)'}")
     print(f"  Nodes: {len(launch_actions)} total")
     print("="*70 + "\n")
 
@@ -308,7 +318,10 @@ def generate_launch_description():
         description='Include pan-tilt camera tower'
     )
 
-
+    declare_include_moveit_cmd = DeclareLaunchArgument(
+        'include_moveit', default_value='false',
+        description='Include MoveIt2 motion planning'
+    )
 
     # Create launch configuration variables for the robot and map name
     my_neo_robot_arg = LaunchConfiguration('my_robot')
@@ -319,7 +332,7 @@ def generate_launch_description():
     include_depth_camera_arg = LaunchConfiguration('include_depth_camera')
 
     include_pan_tilt_arg = LaunchConfiguration('include_pan_tilt')
-
+    include_moveit_arg = LaunchConfiguration('include_moveit')
 
     ld.add_action(declare_my_robot_arg)
     ld.add_action(declare_world_name_arg)
@@ -329,7 +342,7 @@ def generate_launch_description():
     ld.add_action(declare_depth_camera_cmd)
 
     ld.add_action(declare_pan_tilt_cmd)
-
+    ld.add_action(declare_include_moveit_cmd)
 
     context_arguments = [
         my_neo_robot_arg, 
@@ -339,7 +352,8 @@ def generate_launch_description():
         include_wrist_camera_arg,
         include_depth_camera_arg,
 
-        include_pan_tilt_arg
+        include_pan_tilt_arg,
+        include_moveit_arg
     ]
 
     opq_function = OpaqueFunction(
@@ -350,4 +364,3 @@ def generate_launch_description():
     ld.add_action(opq_function)
 
     return ld
-
