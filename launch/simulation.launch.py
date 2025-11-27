@@ -197,6 +197,8 @@ def launch_setup(context: LaunchContext, my_neo_robot_arg, my_neo_env_arg, robot
         arguments=["pan_tilt_controller", "-c", "/controller_manager"],
     )
 
+
+
     # See Issue: https://github.com/ros2/rclpy/issues/1287
     # Cannot delete the newly create file. The user has to delete it on his own
     # Refer documentation for more info
@@ -219,6 +221,8 @@ def launch_setup(context: LaunchContext, my_neo_robot_arg, my_neo_env_arg, robot
     if include_pan_tilt == 'true':
         print("[INFO] - Pan-Tilt Controller")
         launch_actions.append(pan_tilt_controller_spawner)
+
+
 
     print("[INFO] - Gazebo Simulator")
     launch_actions.append(gazebo)
