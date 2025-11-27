@@ -32,6 +32,11 @@ ros2 launch neo_simulation2 simulation.launch.py \
 	my_robot:=mmo_700 world:=neo_workshop arm_type:=ur5e include_pan_tilt:=true
 ```
 
+### Visuals
+![Gazebo Simulation](images/gazebo.png)
+![RViz Visualization](images/rviz.png)
+
+
 ### 5. (Optional) Using Docker
 - Build the Docker image:
 	```bash
